@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laar Institute Management System</title>
+<style>
+:root{--navy:#0b2341;--blue:#0d5bd7;--yellow:#f5c542;--bg:#f4f7fb;--card:#fff;--muted:#6b7280;--line:#e5e7eb;--danger:#c62828;--green:#137333}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:#172033}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.hidden{display:none!important}
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#071a31,#0d5bd7)}
+.login-card{width:min(430px,100%);background:#fff;border-radius:22px;padding:34px;box-shadow:0 24px 70px #0004}
+.logo{width:64px;height:64px;border-radius:16px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:900;margin:auto auto 14px}
+.login-card h1{text-align:center;margin:0 0 6px;color:var(--navy)}.login-card p{text-align:center;color:var(--muted);margin:0 0 24px}
+.field{margin:14px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid #d6dbe4;border-radius:10px;outline:none;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px #0d5bd71a}
+.primary{border:0;background:var(--blue);color:#fff;padding:12px 16px;border-radius:10px;font-weight:800;width:100%}
+.message{margin-top:12px;padding:10px 12px;border-radius:9px;font-size:13px}.error{background:#fff0f0;color:var(--danger)}.success{background:#effaf2;color:var(--green)}
+#app{min-height:100vh;display:flex}.sidebar{width:245px;background:var(--navy);color:#fff;padding:20px 14px;position:fixed;left:0;top:0;bottom:0;overflow:auto}
+.brand{font-size:19px;font-weight:900;padding:10px 10px 20px}.brand small{display:block;font-size:11px;font-weight:500;color:#b8c8dc;margin-top:4px}
+.nav{display:grid;gap:5px}.nav button{border:0;background:transparent;color:#dbe7f6;text-align:left;padding:11px 12px;border-radius:9px}.nav button:hover,.nav button.active{background:#ffffff16;color:#fff}
+.main{margin-left:245px;width:calc(100% - 245px);padding:24px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}.topbar h2{margin:0;color:var(--navy)}
+.logout{border:1px solid #d7dce5;background:#fff;padding:9px 14px;border-radius:9px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}.card .num{font-size:28px;font-weight:900;color:var(--navy)}.card .label{font-size:13px;color:var(--muted);margin-top:4px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}.panel h3{margin:0 0 14px}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.form-grid .field{margin:0}.form-actions{grid-column:1/-1;display:flex;gap:10px}.form-actions button{width:auto}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}th{background:#f8fafc;color:#42506a}.del{border:0;background:#fff0f0;color:var(--danger);padding:6px 9px;border-radius:7px}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px}.pill{display:inline-block;background:#edf4ff;color:var(--blue);padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}
+.empty{color:var(--muted);padding:20px;text-align:center}
+@media(max-width:900px){.sidebar{position:static;width:100%;height:auto}.nav{grid-template-columns:repeat(2,1fr)}.main{margin-left:0;width:100%;padding:14px}.cards{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}.app{display:block}}
+@media(max-width:520px){.cards{grid-template-columns:1fr}.topbar{align-items:flex-start}.nav{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<section id="loginPage">
+  <div class="login-card">
+    <div class="logo">LIT</div>
+    <h1>Laar Institute</h1>
+    <p>Management System</p>
+    <form id="loginForm">
+      <div class="field"><label for="usernameInput">Username</label><input id="usernameInput" autocomplete="username" required></div>
+      <div class="field"><label for="passwordInput">Password</label><input id="passwordInput" type="password" autocomplete="current-password" required></div>
+      <button id="loginBtn" class="primary" type="submit">Login</button>
+      <div id="loginMessage" class="message hidden"></div>
+    </form>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <aside class="sidebar">
+    <div class="brand">LAAR INSTITUTE<small>Management System</small></div>
+    <nav id="nav" class="nav"></nav>
+  </aside>
+  <main class="main">
+    <div class="topbar"><h2 id="pageTitle">Dashboard</h2><button id="logoutBtn" class="logout">Logout</button></div>
+    <div id="content"></div>
+  </main>
+</section>
+
+<script>
+"use strict";
+
+const state = { token: localStorage.getItem("lit_token") || "", data: {}, page: "dashboard" };
+const entities = {
+  students: {title:"Students", fields:["name","father","phone","course","teacher","shift","batch","admissionDate"]},
+  teachers: {title:"Teachers", fields:["name","phone","specialization","email"]},
+  courses: {title:"Courses", fields:["name","duration","fee","description"]},
+  shifts: {title:"Shifts", fields:["name","start","end"]},
+  batches: {title:"Batches", fields:["name","course","shift","startDate"]},
+  modules: {title:"Modules", fields:["course","name","order"]},
+  topics: {title:"Topics", fields:["course","module","name","order"]},
+  lessons: {title:"Daily Classes", fields:["date","course","teacher","topic","details"]},
+  attendance: {title:"Attendance", fields:["date","student","status","remarks"]},
+  progress: {title:"Progress", fields:["student","topic","status","remarks"]},
+  practicals: {title:"Practical Work", fields:["date","student","title","status","remarks"]},
+  tests: {title:"Tests", fields:["date","course","title","totalMarks"]},
+  results: {title:"Results", fields:["test","student","marks","grade","remarks"]}
+};
+
+const navItems = [
+  ["dashboard","Dashboard"],
+  ["students","Students"],
+  ["teachers","Teachers"],
+  ["courses","Courses"],
+  ["modules","Course Outline"],
+  ["lessons","Daily Classes"],
+  ["attendance","Attendance"],
+  ["progress","Progress"],
+  ["practicals","Practical Work"],
+  ["tests","Tests & Results"],
+  ["shifts","Shifts"],
+  ["batches","Batches"]
+];
+
+const $ = (id) => document.getElementById(id);
+
+function showLoginMessage(message, ok=false){
+  const el=$("loginMessage"); el.textContent=message; el.className="message "+(ok?"success":"error");
+}
+function setLoggedIn(on){
+  $("loginPage").classList.toggle("hidden",on);
+  $("app").classList.toggle("hidden",!on);
+}
+async function api(path, options={}){
+  const headers={"content-type":"application/json",...(options.headers||{})};
+  if(state.token) headers.authorization="Bearer "+state.token;
+  const res=await fetch("/api/"+path,{...options,headers});
+  let body={};
+  try{body=await res.json()}catch{}
+  if(!res.ok) throw new Error(body.message || ("Request failed ("+res.status+")"));
+  return body;
+}
+
+async function loginUser(event){
+  event.preventDefault();
+  const btn=$("loginBtn"); btn.disabled=true; btn.textContent="Signing in...";
+  try{
+    const body=await api("login",{method:"POST",body:JSON.stringify({
+      username:$("usernameInput").value.trim(),
+      password:$("passwordInput").value
+    })});
+    state.token=body.token; localStorage.setItem("lit_token",state.token);
+    showLoginMessage("Login successful.",true);
+    await loadData();
+    setLoggedIn(true);
+    renderNav();
+    render();
+  }catch(err){
+    showLoginMessage(err.message || "Login failed.");
+  }finally{
+    btn.disabled=false; btn.textContent="Login";
+  }
+}
+
+async function loadData(){
+  const body=await api("data");
+  state.data=body.data || {};
+}
+
+async function logout(){
+  try{await api("logout",{method:"POST",body:"{}"});}catch{}
+  state.token=""; localStorage.removeItem("lit_token"); setLoggedIn(false);
+  $("passwordInput").value="";
+}
+
+function renderNav(){
+  $("nav").innerHTML=navItems.map(([id,label]) =>
+    `<button class="${state.page===id?"active":""}" data-page="${id}">${label}</button>`
+  ).join("");
+  $("nav").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{state.page=b.dataset.page;renderNav();render();}));
+}
+
+function count(name){return Array.isArray(state.data[name])?state.data[name].length:0}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+function renderDashboard(){
+  const cards=[
+    ["students","Students"],["teachers","Teachers"],["courses","Courses"],["attendance","Attendance"],
+    ["practicals","Practical Work"],["tests","Tests"],["results","Results"],["lessons","Daily Classes"]
+  ];
+  $("content").innerHTML=`<div class="cards">${cards.map(([k,l])=>`<div class="card"><div class="num">${count(k)}</div><div class="label">${l}</div></div>`).join("")}</div>
+  <div class="panel"><h3>Welcome to Laar Institute Management System</h3>
+  <p style="color:#667085;margin:0">Manage students, teachers, courses, daily classes, attendance, progress, practical work and tests from one place.</p></div>`;
+}
+
+function renderEntity(key){
+  const meta=entities[key], list=Array.isArray(state.data[key])?state.data[key]:[];
+  $("content").innerHTML=`
+    <div class="panel">
+      <div class="section-title"><h3>Add ${meta.title}</h3><span class="pill">${list.length} records</span></div>
+      <form id="entityForm" class="form-grid">
+        ${meta.fields.map(f=>`<div class="field"><label>${labelFor(f)}</label><input name="${f}" ${f.toLowerCase().includes("date")||f==="date"||f==="startDate"?"type=date":""}></div>`).join("")}
+        <div class="form-actions"><button class="primary" type="submit">Save Record</button></div>
+        <div id="entityMessage" class="message hidden" style="grid-column:1/-1"></div>
+      </form>
+    </div>
+    <div class="panel"><h3>${meta.title} List</h3><div class="table-wrap">${tableHtml(key,list)}</div></div>`;
+  $("entityForm").addEventListener("submit",(e)=>saveEntity(e,key));
+}
+
+function labelFor(f){return f.replace(/([A-Z])/g," $1").replace(/^./,s=>s.toUpperCase())}
+
+function tableHtml(key,list){
+  if(!list.length)return `<div class="empty">No records yet.</div>`;
+  const fields=entities[key].fields;
+  return `<table><thead><tr>${fields.map(f=>`<th>${labelFor(f)}</th>`).join("")}<th>Action</th></tr></thead><tbody>
+  ${list.map(r=>`<tr>${fields.map(f=>`<td>${escapeHtml(r[f])}</td>`).join("")}<td><button class="del" data-id="${escapeHtml(r.id)}">Delete</button></td></tr>`).join("")}</tbody></table>`;
+}
+
+async function saveEntity(event,key){
+  event.preventDefault();
+  const form=event.currentTarget; const record=Object.fromEntries(new FormData(form).entries());
+  try{
+    await api("data",{method:"POST",body:JSON.stringify({entity:key,record})});
+    await loadData(); render();
+  }catch(err){
+    const m=$("entityMessage"); m.textContent=err.message; m.className="message error"; 
+  }
+}
+
+async function deleteRecord(key,id){
+  if(!confirm("Delete this record?"))return;
+  try{await api("data",{method:"DELETE",body:JSON.stringify({entity:key,id})});await loadData();render();}
+  catch(err){alert(err.message);}
+}
+
+function renderTests(){
+  const tests=state.data.tests||[], results=state.data.results||[];
+  $("content").innerHTML=`<div class="panel"><h3>Tests & Results</h3>
+  <p style="color:#667085">Create tests first, then record student results below.</p></div>
+  <div class="panel"><h3>Tests</h3><div class="table-wrap">${tableHtml("tests",tests)}</div></div>
+  <div class="panel"><h3>Results</h3><div class="table-wrap">${tableHtml("results",results)}</div></div>`;
+  document.querySelectorAll(".del").forEach(btn=>{
+    const parent=btn.closest(".panel"); const key=parent?.querySelector("h3")?.textContent==="Tests"?"tests":"results";
+    btn.addEventListener("click",()=>deleteRecord(key,btn.dataset.id));
+  });
+}
+
+function render(){
+  const title=navItems.find(x=>x[0]===state.page)?.[1]||"Dashboard";
+  $("pageTitle").textContent=title;
+  if(state.page==="dashboard") renderDashboard();
+  else if(state.page==="tests") renderTests();
+  else renderEntity(state.page);
+  document.querySelectorAll(".del").forEach(btn=>{
+    const key=state.page==="tests"?"tests":state.page;
+    btn.addEventListener("click",()=>deleteRecord(key,btn.dataset.id));
+  });
+}
+
+$("loginForm").addEventListener("submit",loginUser);
+$("logoutBtn").addEventListener("click",logout);
+
+(async function boot(){
+  if(!state.token){setLoggedIn(false);return;}
+  try{await loadData();setLoggedIn(true);renderNav();render();}
+  catch{state.token="";localStorage.removeItem("lit_token");setLoggedIn(false);}
+})();
+</script>
+</body>
+</html>
